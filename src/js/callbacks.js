@@ -74,8 +74,8 @@ function handleMouseMove(event) {
 		rotX += degToRad(deltaY / 5);
 
 		mat4.identity(rotMatrix);
-		mat4.rotate(rotMatrix, -rotY, [0, 1, 0]);
-		mat4.rotate(rotMatrix, -rotX, [1, 0, 0]);
+		mat4.rotateY(rotMatrix, -rotY);
+		mat4.rotateX(rotMatrix, -rotX);
 	}
 	
 	lastMouseX = newX

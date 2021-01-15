@@ -7,7 +7,7 @@ var gl;
 var cameraPos = [0., 0., 1.];
 var viewMatrix = mat4.create();
 
-// distCENTER = translation en z
+// distCENTER = Z translation
 var distCENTER = 0.0;
 
 var rotMatrix = mat4.create();
@@ -17,7 +17,7 @@ var inv_pViewMatrix = mat4.create();
 
 var envMapON = 0;
 
-var uLightsON    = [1, 0, 0, 0, 0, 0];
+var uLightsON    = [0, 1, 0, 0, 0, 0];
 var uColorLights = [1., 1., 1.];
 var uPosLights   = [ 0., 0.,  0.,
 				     0., 100.,  0.,
@@ -56,7 +56,7 @@ var SKYBOX = null;
 class objmesh {
 
 	// --------------------------------------------
-	constructor(objFname, shaderName, translate, eulerAngles, scale) {
+	constructor(objFname, shaderName, transVal, eulerAngles, scaleVal) {
 		this.objName = 'assets/models/' + objFname;
 
 		this.shaderPath = 'assets/shaders/';
@@ -70,17 +70,18 @@ class objmesh {
 		let scaleMatrixModel = mat4.create();
 
 		mat4.identity(transMatrixModel);
-		mat4.translate(transMatrixModel, translate);
+		mat4.translate(transMatrixModel, transVal);
 
+		// Common rotation order : Y parent of X parent of Z
 		mat4.identity(rotMatrixModel);
 		mat4.rotateY(rotMatrixModel, eulerAngles[1]);
 		mat4.rotateX(rotMatrixModel, eulerAngles[0]);
 		mat4.rotateZ(rotMatrixModel, eulerAngles[2]);
 
 		mat4.identity(scaleMatrixModel);
-		mat4.scale(scaleMatrixModel, [scale, scale, scale]);
+		mat4.scale(scaleMatrixModel, [scaleVal, scaleVal, scaleVal]);
 
-		// T * R * S
+		// M = T * R * S
 		mat4.multiply(transMatrixModel, rotMatrixModel, this.modelMatrix);
 		mat4.multiply(this.modelMatrix, scaleMatrixModel);
 
@@ -267,14 +268,14 @@ class plane {
 
 
 // =====================================================
-// Map d'environnement, Support géométrique
+// Skybox & map d'environnement, Reflexion du metal en environnement statique
 // =====================================================
 
 class skybox {
 
 	// --------------------------------------------
 	constructor(envName, width, height) {
-		this.envPath = 'assets/environement_map/';
+		this.envPath = 'assets/environment_map/';
 		this.envName = envName;
 
 		this.shaderPath = 'assets/shaders/';
@@ -389,17 +390,16 @@ class skybox {
 
 	// --------------------------------------------
 	setShadersParams() {
+		// Specific for render the skybox
 		gl.depthFunc(gl.LEQUAL);
 
 		gl.useProgram(this.shader);
 
-		// look up where the vertex data needs to go.
 		this.shader.tcAttrib = gl.getAttribLocation(this.shader, "aTexCoords");
 		gl.enableVertexAttribArray(this.shader.tcAttrib);
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.cubemapBuffer);
 		gl.vertexAttribPointer(this.shader.tcAttrib, this.cubemapBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-		// lookup uniforms
 		this.shader.inv_pViewMatrixUniform = gl.getUniformLocation(this.shader, "u_invPViewMatrix");		
 		this.shader.uSkyboxSamplerUniform = gl.getUniformLocation(this.shader, "uSkybox");
 	}
@@ -409,9 +409,10 @@ class skybox {
 	setMatrixUniforms() {
 		mat4.identity(inv_pViewMatrix);
 
-		viewMatrix[12] = 0.;
-		viewMatrix[13] = 0.;
-		viewMatrix[14] = 0.;
+		// We place the view at the center of the scene according to the skybox
+		viewMatrix[12] = 0.0;
+		viewMatrix[13] = 0.0;
+		viewMatrix[14] = 0.0;
 
 		mat4.multiply(pMatrix, viewMatrix, inv_pViewMatrix);
 		mat4.inverse(inv_pViewMatrix);
@@ -432,22 +433,26 @@ class skybox {
 			// Upload the canvas to the cubemap face.
 			const level = 0;
 			const internalFormat = gl.RGBA;
-			//const border = 0;
 			const format = gl.RGBA;
 			const type = gl.UNSIGNED_BYTE;
+			//const border = 0;
 			//const pixel = new Uint8Array ([0, 0, 255, 255]);
 
-			// setup each face so it's immediately renderable
+			// Used only for testing
 			//gl.texImage2D(target, level, internalFormat, width, height, border, format, type, pixel);
+
+			// Allocation d'un espace VRAM pour les textures.
 			gl.texImage2D(target, level, internalFormat, width, height, 0, format, type, null);
 
 			// Asynchronously load an image
 			const image = new Image();
 			image.src = src;
 			image.addEventListener('load', function() {
+
+				
 				gl.bindTexture(gl.TEXTURE_CUBE_MAP, tbuffer);
 				gl.texImage2D(target, level, internalFormat, format, type, image);
-				// Now that the image has loaded make copy it to the texture.
+
 				// WebGL1 a des spécifications différentes pour les images puissances de 2
 				// par rapport aux images non puissances de 2 ; aussi vérifier si l'image est une
 				// puissance de 2 sur chacune de ses dimensions.
@@ -458,8 +463,6 @@ class skybox {
 				}
 
 				else {
-					// Non, ce n'est pas une puissance de 2. Désactiver les mips et définir l'habillage
-					// comme "accrocher au bord"
 					gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 					gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 					gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -596,17 +599,10 @@ function updateViewMatrix()
 		cameraPos[2] = 0.0;
 	}
 
+	// On clamp les rotations sur l'axe X pour une valeur +/- inférieur a PI/2
 	mat4.identity(rotMatrix);
-
-	if(Math.abs(rotX) >= 1.5707)
-	{
-		if(rotX < 0.)
-			rotX = -1.5706;
-
-		else
-			rotX = 1.5706;
-
-	}
+	if(Math.abs(rotX) >= (Math.PI / 2.))
+		rotX = (rotX < 0.) ? -1.5706 : 1.5706;
 
 	mat4.rotateY(rotMatrix, -rotY);
 	mat4.rotateX(rotMatrix, -rotX);
@@ -620,6 +616,7 @@ function updateViewMatrix()
 	uPosLights[2] = cameraPos[2];
 }
 
+// Point d'entree de WebGL
 // =====================================================
 function webGLStart() {
 
@@ -638,6 +635,7 @@ function webGLStart() {
 	PLANE = new plane();
 	OBJ1 = new objmesh(modelName + '.obj', renderFuncName, modelTrans, modelRot, modelScale);
 
+	// Equivalent de la boucle principale en C/C++
 	tick();
 }
 
@@ -656,6 +654,7 @@ function drawScene() {
 	if(envMapON == 1)
 		SKYBOX.draw();
 }
+
 
 // SECTION DEDIEE A L'INTERFACE UTILISATEUR
 // =====================================================
@@ -689,7 +688,7 @@ $(document).ready(function() {
 		       success : function(code_html, statut) {
 					$('#map-selection').append(code_html);
 
-					SKYBOX = new skybox('museum', 512, 512);
+					SKYBOX = new skybox('basilica', 2048, 2048);
 					envMapON = 1;
 
 					$('#select-map').on('change', function() {
@@ -793,14 +792,14 @@ $(document).ready(function() {
 		            	}
 					});
 
-					lightObsCheck.prop("checked", true);
-					lightUpCheck.prop("checked", false);
+					lightObsCheck.prop("checked", false);
+					lightUpCheck.prop("checked", true);
 					lightFrontCheck.prop("checked", false);
 					lightBackCheck.prop("checked", false);
 					lightLeftCheck.prop("checked", false);
 					lightRightCheck.prop("checked", false);
 
-					uLightsON = [1, 0, 0, 0, 0, 0];
+					uLightsON = [0, 1, 0, 0, 0, 0];
 				}
 
 				if('cook_torrance' === renderFuncName) {
@@ -831,13 +830,6 @@ $(document).ready(function() {
 						lightRightCheck.prop("checked", true);
 
 						uLightsON = [0, 1, 1, 1, 1, 1];
-
-						SKYBOX = null;
-
-						envMapON = 0;
-						envMapCheck.prop("checked", false);
-
-						envMapToggled()
 					}
 
 					else
@@ -853,7 +845,7 @@ $(document).ready(function() {
 
 						if(envMapON == 0)
 						{
-							SKYBOX = new skybox('museum', 512, 512);
+							SKYBOX = new skybox('basilica', 2048, 2048);
 
 							envMapON = 1;
 							envMapCheck.prop("checked", true);
@@ -922,15 +914,15 @@ $(document).ready(function() {
 	envMapON = 0;
 	envMapCheck.prop("checked", false);
 
-	envMapCheck.change(function() { envMapToggled() });
+	envMapCheck.change(function() { envMapToggled(); });
 
 	// Allumer une ou plusieurs sources de lumière de position fixe
 	// -------------------------------------------------------------------------------------------
 
-	uLightsON = [1, 0, 0, 0, 0, 0];
+	uLightsON = [0, 1, 0, 0, 0, 0];
 
-	lightObsCheck.prop("checked", true);
-	lightUpCheck.prop("checked", false);
+	lightObsCheck.prop("checked", false);
+	lightUpCheck.prop("checked", true);
 	lightFrontCheck.prop("checked", false);
 	lightBackCheck.prop("checked", false);
 	lightLeftCheck.prop("checked", false);
