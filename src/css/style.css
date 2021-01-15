@@ -1,0 +1,51 @@
+body {
+	padding: 0;
+	margin: 0;
+}
+
+canvas {
+	width: 100vw;
+	height: calc(100vh - 6px);
+}
+
+.interface-render {
+	position: absolute;
+	z-index: 1;
+	top: 0;
+	width: 20vw;
+	padding: 0.5rem;
+	overflow: auto;
+}
+
+@media (max-width: 600px) {
+    .interface-render {
+        bottom: 0;
+        height: 35vh;
+        width: 100vw;
+        top: auto;
+    }
+}
+
+.interface-light {
+	position: absolute;
+	z-index: 1;
+	top: 0;
+	right: 0;
+	width: 20vw;
+	padding: 0.5rem;
+	overflow: auto;
+}
+
+@media (max-width: 600px) {
+    .interface-light {
+        top: 0;
+        height: 35vh;
+        width: 100vw;
+        bottom: auto;
+    }
+}
+
+#div-color-lights {
+	margin-top: 1em;
+}
+

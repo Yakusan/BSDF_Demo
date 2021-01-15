@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Projet BRDF en WebGL</title>
+		<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+		<link rel="stylesheet" type="text/css" href="lib/css/bootstrap.min.css">
+		<link rel="stylesheet" type="text/css" href="lib/css/bootstrap-colorpicker.min.css">
+		<link rel="stylesheet" type="text/css" href="src/css/style.css">
+		<script type="text/javascript" src="lib/js/jquery-3.5.1.min.js"></script>
+		<script type="text/javascript" src="lib/js/popper.min.js"></script>
+		<script type="text/javascript" src="lib/js/bootstrap.min.js"></script>
+		<script type="text/javascript" src="lib/js/bootstrap-colorpicker.min.js"></script>
+		<script type="text/javascript" src="lib/js/glMatrix.js"></script>
+		<script type="text/javascript" src="lib/js/objLoader.js"></script>
+		<script type="text/javascript" src="src/js/callbacks.js"></script>
+		<script type="text/javascript" src="src/js/glCourseBasis.js"></script>
+	</head>
+
+	<body onload="webGLStart();">
+		<canvas id="WebGL-app" width="1920" height="1080"></canvas>
+		<div class="interface-render">
+			<div class="card border-dark mb-3">
+				<div class="card-header">
+					Configuration du rendu
+				</div>
+				<div class="card-body">
+					<form>
+						<div class="form-group">
+							<label for="select-model">Modele a charger :</label>
+							<select id="select-model" class="form-control">
+								<option value="bunny, (0.0, -0.25, 0.0), (0.0, 0.0, 0.0), 0.5" selected>Lapin</option>
+								<option value="cube, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 1.0">Cube</option>
+								<option value="dragon, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 1.0">Dragon</option>
+								<option value="elephant, (0.0, -1.5, 0.0), (0.0, 0.0, 0.0), 1.0">Elephant</option>
+								<option value="chessPawn, (0.0, -0.75, 0.0), (0.0, 0.0, 0.0), 20.0" selected>Pion</option>
+								<option value="teapot, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.1">Teapot</option>
+								<option value="monkey, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 1.0">Singe</option>
+								<option value="venus, (0.0, -1.0, 0.0), (0.0, 0.0, 0.0), 0.0005">Venus</option>
+							</select>
+						</div>
+
+						<div class="form-group">
+							<label for="select-render">Fonction BRDF :</label>
+							<select id="select-render" class="form-control">
+								<option value="lambert" selected>Lambert</option>
+								<option value="cook_torrance">Cook-Torrance</option>
+								<option value="cook_torrance_metal">Bonus : Cook-Torrance sur les surfaces metallique</option>
+							</select>
+						</div>
+						<div id="render-config">
+							<div class="form-group">
+								<label for="colorpicker">Couleur de l'objet</label>
+							    <input id="colorpicker" type="text" value="rgb(255, 128, 0)" class="form-control">
+							</div>
+						</div>
+						<div class="custom-control custom-checkbox">
+							<input type="checkbox" class="custom-control-input" id="planCheck">
+							<label class="custom-control-label" for="planCheck">Afficher plan</label>
+						</div>
+						<div class="custom-control custom-checkbox">
+							<input type="checkbox" class="custom-control-input" id="toneMappingCheck">
+							<label class="custom-control-label" for="toneMappingCheck">Tone Mapping</label>
+						</div>
+
+						<div class="custom-control custom-checkbox">
+							<input type="checkbox" class="custom-control-input" id="gammaCheck">
+							<label class="custom-control-label" for="gammaCheck">Correction Gamma</label>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<div class="interface-light">
+			<div class="card border-dark mb-3">
+				<div class="card-header">
+					Configuration lumineuse
+				</div>
+				<div class="card-body">
+					<form>
+						<div id="map-group">
+							<div class="custom-control custom-checkbox">
+								<input type="checkbox" class="custom-control-input" id="envMapCheck">
+								<label class="custom-control-label" for="envMapCheck">Carte d'environnement</label>
+							</div>
+							<div id="map-selection"></div>
+						</div>
+
+						<div class="custom-control custom-checkbox">
+							<input type="checkbox" class="custom-control-input" id="lightObsCheck">
+							<label class="custom-control-label" for="lightObsCheck">Observateur</label>
+						</div>
+
+						<div class="custom-control custom-checkbox">
+							<input type="checkbox" class="custom-control-input" id="lightUpCheck">
+							<label class="custom-control-label" for="lightUpCheck">Au dessus</label>
+						</div>
+
+						<div class="custom-control custom-checkbox">
+							<input type="checkbox" class="custom-control-input" id="lightFrontCheck">
+							<label class="custom-control-label" for="lightFrontCheck">De face</label>
+						</div>
+
+						<div class="custom-control custom-checkbox">
+							<input type="checkbox" class="custom-control-input" id="lightBackCheck">
+							<label class="custom-control-label" for="lightBackCheck">De derriere</label>
+						</div>
+
+						<div class="custom-control custom-checkbox">
+							<input type="checkbox" class="custom-control-input" id="lightLeftCheck">
+							<label class="custom-control-label" for="lightLeftCheck">A gauche</label>
+						</div>
+
+						<div class="custom-control custom-checkbox">
+							<input type="checkbox" class="custom-control-input" id="lightRightCheck">
+							<label class="custom-control-label" for="lightRightCheck">A Droite</label>
+						</div>
+
+						<div class="form-group" id="div-color-lights">
+							<label for="colorpicker-lights">Couleur des lumieres</label>
+							<input id="colorpicker-lights" type="text" value="rgb(255, 128, 0)" class="form-control">
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
