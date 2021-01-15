@@ -21,41 +21,41 @@
 		<div class="interface-render">
 			<div class="card border-dark mb-3">
 				<div class="card-header">
-					Configuration du rendu
+					Rendering configuration
 				</div>
 				<div class="card-body">
 					<form>
 						<div class="form-group">
-							<label for="select-model">Modele a charger :</label>
+							<label for="select-model">Model to load :</label>
 							<select id="select-model" class="form-control">
-								<option value="bunny, (0.0, -0.25, 0.0), (0.0, 0.0, 0.0), 0.5" selected>Lapin</option>
+								<option value="bunny, (0.0, -0.25, 0.0), (0.0, 0.0, 0.0), 0.5" selected>Bunny</option>
 								<option value="cube, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 1.0">Cube</option>
 								<option value="dragon, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 1.0">Dragon</option>
 								<option value="elephant, (0.0, -1.5, 0.0), (0.0, 0.0, 0.0), 1.0">Elephant</option>
-								<option value="chessPawn, (0.0, -0.75, 0.0), (0.0, 0.0, 0.0), 20.0" selected>Pion</option>
+								<option value="chessPawn, (0.0, -0.75, 0.0), (0.0, 0.0, 0.0), 20.0">Pawn</option>
 								<option value="teapot, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 0.1">Teapot</option>
-								<option value="monkey, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 1.0">Singe</option>
+								<option value="monkey, (0.0, 0.0, 0.0), (0.0, 0.0, 0.0), 1.0">Monkey</option>
 								<option value="venus, (0.0, -1.0, 0.0), (0.0, 0.0, 0.0), 0.0005">Venus</option>
 							</select>
 						</div>
 
 						<div class="form-group">
-							<label for="select-render">Fonction BRDF :</label>
+							<label for="select-render">BRDF function:</label>
 							<select id="select-render" class="form-control">
 								<option value="lambert" selected>Lambert</option>
 								<option value="cook_torrance">Cook-Torrance</option>
-								<option value="cook_torrance_metal">Bonus : Cook-Torrance sur les surfaces metallique</option>
+								<option value="cook_torrance_metal">Cook-Torrance on metallic surfaces</option>
 							</select>
 						</div>
 						<div id="render-config">
 							<div class="form-group">
-								<label for="colorpicker">Couleur de l'objet</label>
+								<label for="colorpicker">Object color (albedo)</label>
 							    <input id="colorpicker" type="text" value="rgb(255, 128, 0)" class="form-control">
 							</div>
 						</div>
 						<div class="custom-control custom-checkbox">
 							<input type="checkbox" class="custom-control-input" id="planCheck">
-							<label class="custom-control-label" for="planCheck">Afficher plan</label>
+							<label class="custom-control-label" for="planCheck">Display plan</label>
 						</div>
 						<div class="custom-control custom-checkbox">
 							<input type="checkbox" class="custom-control-input" id="toneMappingCheck">
@@ -64,7 +64,7 @@
 
 						<div class="custom-control custom-checkbox">
 							<input type="checkbox" class="custom-control-input" id="gammaCheck">
-							<label class="custom-control-label" for="gammaCheck">Correction Gamma</label>
+							<label class="custom-control-label" for="gammaCheck">Gamma correction</label>
 						</div>
 					</form>
 				</div>
@@ -74,50 +74,50 @@
 		<div class="interface-light">
 			<div class="card border-dark mb-3">
 				<div class="card-header">
-					Configuration lumineuse
+					Light configuration
 				</div>
 				<div class="card-body">
 					<form>
 						<div id="map-group">
 							<div class="custom-control custom-checkbox">
 								<input type="checkbox" class="custom-control-input" id="envMapCheck">
-								<label class="custom-control-label" for="envMapCheck">Carte d'environnement</label>
+								<label class="custom-control-label" for="envMapCheck">Environment Map</label>
 							</div>
 							<div id="map-selection"></div>
 						</div>
 
 						<div class="custom-control custom-checkbox">
 							<input type="checkbox" class="custom-control-input" id="lightObsCheck">
-							<label class="custom-control-label" for="lightObsCheck">Observateur</label>
+							<label class="custom-control-label" for="lightObsCheck">Light from camera</label>
 						</div>
 
 						<div class="custom-control custom-checkbox">
 							<input type="checkbox" class="custom-control-input" id="lightUpCheck">
-							<label class="custom-control-label" for="lightUpCheck">Au dessus</label>
+							<label class="custom-control-label" for="lightUpCheck">Up</label>
 						</div>
 
 						<div class="custom-control custom-checkbox">
 							<input type="checkbox" class="custom-control-input" id="lightFrontCheck">
-							<label class="custom-control-label" for="lightFrontCheck">De face</label>
+							<label class="custom-control-label" for="lightFrontCheck">Front</label>
 						</div>
 
 						<div class="custom-control custom-checkbox">
 							<input type="checkbox" class="custom-control-input" id="lightBackCheck">
-							<label class="custom-control-label" for="lightBackCheck">De derriere</label>
+							<label class="custom-control-label" for="lightBackCheck">Back</label>
 						</div>
 
 						<div class="custom-control custom-checkbox">
 							<input type="checkbox" class="custom-control-input" id="lightLeftCheck">
-							<label class="custom-control-label" for="lightLeftCheck">A gauche</label>
+							<label class="custom-control-label" for="lightLeftCheck">From the Left</label>
 						</div>
 
 						<div class="custom-control custom-checkbox">
 							<input type="checkbox" class="custom-control-input" id="lightRightCheck">
-							<label class="custom-control-label" for="lightRightCheck">A Droite</label>
+							<label class="custom-control-label" for="lightRightCheck">From the right</label>
 						</div>
 
 						<div class="form-group" id="div-color-lights">
-							<label for="colorpicker-lights">Couleur des lumieres</label>
+							<label for="colorpicker-lights">Color of the lights</label>
 							<input id="colorpicker-lights" type="text" value="rgb(255, 128, 0)" class="form-control">
 						</div>
 					</form>
