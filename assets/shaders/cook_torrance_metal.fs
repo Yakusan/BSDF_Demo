@@ -85,9 +85,9 @@ void main(void)
     {
         vec3 Wo = normalize(vec3(pos3D) - uPosLights[0]);
         vec3 R = normalize(reflect(Wo, N));
-        vec3 irradianceMap = textureCube(u_skybox, R).rgb;
+        vec3 irradianceMap = textureCube(u_skybox, R, 4.0 * uRoughness).rgb;
 
-        Lo = mix(irradianceMap, Cook_Torrance_Metal(R, irradianceMap), uRoughness);
+        Lo = mix(irradianceMap * uF0, Cook_Torrance_Metal(R, irradianceMap), uRoughness);
     }
 
     for(int i = 0 ; i < 6 ; ++i)

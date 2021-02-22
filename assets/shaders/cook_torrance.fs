@@ -10,6 +10,9 @@ uniform vec3  uKd;        // Couleur du modele
 uniform vec3  uF0;        // Valeur de F0° lineaire du modele pour la diffusion et la refraciton [0., 1.]
 uniform float uRoughness; // Rugosite du modele
 
+uniform int uEnvMapON;
+uniform samplerCube u_skybox;
+
 uniform int uToneMappingCheck;
 uniform int uGammaCheck;
 
@@ -70,9 +73,8 @@ float Cook_Torrance_Geometry(vec3 Wi, vec3 Wo, vec3 m)
 // ============== FONCTION DE RENDU ==================
 
 // Wi =  Direction de la lumière incidente (vecteur unitaire)
-vec3 Cook_Torrance(vec3 Wi)
+vec3 Cook_Torrance(vec3 Wi, vec3 Li)
 {    
-    vec3  Li  = uColorLights;                           // Puissance de la lumiere incidente (ici c'est simplement la couleur)
     vec3  Wo  = normalize(uPosLights[0] - vec3(pos3D)); // Direction de l'oeil de l'observateur (vecteur unitaire)
     vec3  m   = normalize(Wi + Wo);                     // normale des microsurfaces
     float idn = dot(N, Wi);                             // cosinus de l'angle (N, Wi)
@@ -96,11 +98,20 @@ void main(void)
 {
     vec3 Lo = vec3(0.0, 0.0, 0.0);
 
+    if(uEnvMapON == 1)
+    {
+        vec3 Wo = normalize(vec3(pos3D) - uPosLights[0]);
+        vec3 R = normalize(reflect(Wo, N));
+        vec3 irradianceMap = textureCube(u_skybox, R).rgb;
+
+        Lo = Cook_Torrance(R, irradianceMap);
+    }
+
     for(int i = 0 ; i < 6 ; ++i)
     {
         // Equation de rendu Lo = Li * Fr physiquement realiste par la conservation de l'energie avec Fr * cos(angle (N, Wi))
         if(uLightsON[i] == 1)
-            Lo += Cook_Torrance(normalize(uPosLights[i] - vec3(pos3D)));
+            Lo += Cook_Torrance(normalize(uPosLights[i] - vec3(pos3D)), uColorLights);
     }
 
     if(uToneMappingCheck == 1)

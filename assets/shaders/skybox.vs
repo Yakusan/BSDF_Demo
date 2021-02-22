@@ -1,8 +1,5 @@
 attribute vec3 aTexCoords;
 
-uniform mat4 uRMatrix;
-uniform mat4 uPMatrix;
-
 varying vec4 texCoords;
 varying mat4 invPMVMatrix;
 
