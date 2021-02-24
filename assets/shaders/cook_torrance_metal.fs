@@ -27,29 +27,28 @@ const float M_PI = 3.14159265359;
 
 
 // ================== FONCTIONS ======================
-vec3 Fresnel_Schlick_approximation(vec3 Wi, vec3 m)
+vec3 Fresnel_Schlick_approximation(float m_idm)
 {   
     // vec3 F90° = vec3(1.0, 1.0, 1.0)
-    return uF0 + (vec3(1.0, 1.0, 1.0) - uF0) * pow(1.0 - max(dot(m, Wi), 0.0), 5.0);
+    return uF0 + (vec3(1.0) - uF0) * pow(1.0 - m_idm, 5.0);
 }
 
-float Beckmann_Distribution(vec3 m)
+float Beckmann_Distribution(float cos_theta_m)
 {
     float roughness2    = uRoughness * uRoughness;
-    float cos_theta_m   = dot(N, m);
     float cos2_theta_m  = cos_theta_m * cos_theta_m;
     float tan2_m_inv_r2 = (cos2_theta_m - 1.0) / (roughness2 * cos2_theta_m);
 
-    return (clamp(cos_theta_m, 0.00, 1.00) * exp(tan2_m_inv_r2)) / (M_PI * roughness2 * (cos2_theta_m * cos2_theta_m));
+    return (step(0.0009765625, cos_theta_m) * exp(tan2_m_inv_r2)) / (M_PI * roughness2 * (cos2_theta_m * cos2_theta_m));
 }
 
 
-float Cook_Torrance_Geometry(vec3 Wi, vec3 Wo, vec3 m)
+float Cook_Torrance_Geometry(float idn, float odn, float m_idm, float ndm)
 {
-    float ndm = max(dot(N, m), 0.0);
+    float m_ndm = max(ndm, 0.0);
 
-    float gnmi = (2.0 * ndm * max(dot(N, Wi), 0.0)) / max(dot(m, Wi), 0.0);
-    float gnmo = (2.0 * ndm * max(dot(N, Wo), 0.0)) / max(dot(m, Wo), 0.0);
+    float gnmi = (2.0 * m_ndm * max(idn, 0.0)) / m_idm;
+    float gnmo = (2.0 * m_ndm * max(odn, 0.0)) / m_idm;
 
     return min(1., min(gnmi, gnmo));
 }
@@ -60,14 +59,17 @@ float Cook_Torrance_Geometry(vec3 Wi, vec3 Wo, vec3 m)
 // Li = Puissance de la lumiere incidente (La couleur d'une lumiere ponctuelle ou la carte d'irradiance)
 vec3 Cook_Torrance_Metal(vec3 Wi, vec3 Li)
 {
-    vec3  Wo  = normalize(uPosLights[0] - vec3(pos3D)); // Direction de l'oeil de l'observateur (vecteur unitaire)
-    vec3  m   = normalize(Wi + Wo);                     // normale des microsurfaces
-    float idn = dot(N, Wi);                             // cosinus de l'angle (N, Wi)
+    vec3  Wo    = normalize(uPosLights[0] - vec3(pos3D)); // Direction de l'oeil de l'observateur (vecteur unitaire)
+    vec3  m     = normalize(Wi + Wo);                     // normale des microsurfaces
+    float m_idm = max(dot(m, Wi), 0.0);
+    float ndm   = dot(N, m);                              // cosinus de l'angle (N, m)
+    float idn   = dot(N, Wi);                             // cosinus de l'angle (N, Wi)
+    float odn   = dot(N, Wo);                             // cosinus de l'angle (N, Wo)
 
     // Calcul du speculaire de Cook-Torrance
-    vec3 Fs = (Fresnel_Schlick_approximation(Wi, m) *
-               Beckmann_Distribution(m) *
-               Cook_Torrance_Geometry(Wi, Wo, m)) / (4.0 * abs(idn) * abs(dot(N, Wo)));
+    vec3 Fs = (Fresnel_Schlick_approximation(m_idm) *
+               Beckmann_Distribution(ndm) *
+               Cook_Torrance_Geometry(idn, odn, m_idm, ndm)) / (4.0 * abs(idn) * abs(odn));
 
 
     // Fr = Fonction de rendu: Pas de diffusion pour le metal, seulement la Speculaire de Cook-Torrance
@@ -79,7 +81,7 @@ vec3 Cook_Torrance_Metal(vec3 Wi, vec3 Li)
 
 void main(void)
 {
-    vec3 Lo = vec3(0.0, 0.0, 0.0);
+    vec3 Lo = vec3(0.0);
 
     if(uEnvMapON == 1)
     {
@@ -98,7 +100,7 @@ void main(void)
     }
 
     if(uToneMappingCheck == 1)
-        Lo = Lo / (Lo + vec3(1.0, 1.0, 1.0));
+        Lo = Lo / (Lo + vec3(1.0));
     
     if(uGammaCheck == 1)
     {

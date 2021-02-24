@@ -28,6 +28,7 @@ var uPosLights   = [ 0., 0.,  0.,
 
 var uKd = [0.008, 0.4, 0.8];
 var uF0 = [0.04, 0.04, 0.04];
+var uNo = 1.5;
 var uRoughness = 1.0;
 
 var uToneMappingCheck = 0;
@@ -124,6 +125,9 @@ class objmesh {
 			this.shader.uRoughness = gl.getUniformLocation(this.shader, "uRoughness");
 		}
 
+		if(this.shadername !== 'cook_torrance')
+			this.shader.uNo = gl.getUniformLocation(this.shader, "uNo");
+
 		this.shader.uToneMappingCheck = gl.getUniformLocation(this.shader, "uToneMappingCheck");
 		this.shader.uGammaCheck = gl.getUniformLocation(this.shader, "uGammaCheck");
 
@@ -149,6 +153,9 @@ class objmesh {
 			gl.uniform3fv(this.shader.uF0, uF0);
 			gl.uniform1f(this.shader.uRoughness, uRoughness);
 		}
+
+		if(this.shadername !== 'cook_torrance')
+			gl.uniform1f(this.shader.uNo, uNo);
 
 		gl.uniform1i(this.shader.uToneMappingCheck, uToneMappingCheck);
 		gl.uniform1i(this.shader.uGammaCheck, uGammaCheck);
@@ -821,6 +828,7 @@ $(document).ready(function() {
 					if('cook_torrance' === renderFuncName)
 					{
 						uF0 = [0.04, 0.04, 0.04]; // F0 plastique
+						uNo = 1.5;
 
 					  	lightObsCheck.prop("checked", false);
 						lightUpCheck.prop("checked", true);
@@ -830,6 +838,14 @@ $(document).ready(function() {
 						lightRightCheck.prop("checked", true);
 
 						uLightsON = [0, 1, 1, 1, 1, 1];
+
+						$('#select-material').on('change', function(event) {
+							let match = /F0\((\d+.\d+), (\d+.\d+), (\d+.\d+)\), (\d+.\d+)/.exec($(this).find(':selected').val());
+			            	if (match !== null) {
+								uF0 = [parseFloat(match[1]), parseFloat(match[2]), parseFloat(match[3])];
+								uNo = parseFloat(match[4]);
+			            	}
+						});
 					}
 
 					else
@@ -854,16 +870,15 @@ $(document).ready(function() {
 						}
 
 						uF0 = [1.0, 0.782, 0.344]; // F0 de l'or
+
+						$('#select-material').on('change', function(event) {
+							let match = /F0\((\d+.\d+), (\d+.\d+), (\d+.\d+)\)/.exec($(this).find(':selected').val());
+			            	if (match !== null)
+								uF0 = [parseFloat(match[1]), parseFloat(match[2]), parseFloat(match[3])];
+						});
 					}
 
 					uRoughness = 0.5;
-
-					$('#select-material').on('change', function(event) {
-						let match = /F0\((\d+.\d+), (\d+.\d+), (\d+.\d+)\)/.exec($(this).find(':selected').val());
-		            	if (match !== null) {
-							uF0 = [parseFloat(match[1]), parseFloat(match[2]), parseFloat(match[3])];
-		            	}
-					});
 
 				  	const $roughnessSpan = $('#roughness-span');
 				  	$roughnessSpan.html(uRoughness.toPrecision(2));

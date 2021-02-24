@@ -36,7 +36,7 @@ vec3 Lambert(vec3 Wi)
 
 void main(void)
 {
-	vec3 Lo = vec3(0.0, 0.0, 0.0);
+	vec3 Lo = vec3(0.0);
 
 	for(int i = 0 ; i < 6 ; ++i)
 	{

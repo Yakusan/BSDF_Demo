@@ -8,6 +8,7 @@ uniform vec3 uColorLights;  // Couleur des lumieres
 
 uniform vec3  uKd;        // Couleur du modele
 uniform vec3  uF0;        // Valeur de F0° lineaire du modele pour la diffusion et la refraciton [0., 1.]
+uniform float uNo;
 uniform float uRoughness; // Rugosite du modele
 
 uniform int uEnvMapON;
@@ -42,80 +43,132 @@ const float M_PI = 3.14159265359;
 
 
 // ================== FONCTIONS ======================
-vec3 Fresnel_Schlick_approximation(vec3 Wi, vec3 m)
+vec3 Fresnel_Schlick_approximation(float m_idm)
 {   
-    // vec3 F90° = vec3(1.0, 1.0, 1.0)
-    return uF0 + (vec3(1.0, 1.0, 1.0) - uF0) * pow(1.0 - max(dot(m, Wi), 0.0), 5.0);
+    // vec3 F90° = vec3(1.0)
+    return uF0 + (vec3(1.0) - uF0) * pow(1.0 - m_idm, 5.0);
 }
 
-float Beckmann_Distribution(vec3 m)
+float Beckmann_Distribution(float cos_theta_m)
 {
     float roughness2    = uRoughness * uRoughness;
-    float cos_theta_m   = dot(N, m);
     float cos2_theta_m  = cos_theta_m * cos_theta_m;
     float tan2_m_inv_r2 = (cos2_theta_m - 1.0) / (roughness2 * cos2_theta_m);
 
-    return (clamp(cos_theta_m, 0.00, 1.00) * exp(tan2_m_inv_r2)) / (M_PI * roughness2 * (cos2_theta_m * cos2_theta_m));
+    return (step(0.0009765625, cos_theta_m) * exp(tan2_m_inv_r2)) / (M_PI * roughness2 * (cos2_theta_m * cos2_theta_m));
 }
 
 
-float Cook_Torrance_Geometry(vec3 Wi, vec3 Wo, vec3 m)
+float Cook_Torrance_Geometry(float idn, float odn, float m_idm, float ndm)
 {
-    float ndm = max(dot(N, m), 0.0);
+    float m_ndm = max(ndm, 0.0);
 
-    float gnmi = (2.0 * ndm * max(dot(N, Wi), 0.0)) / max(dot(m, Wi), 0.0);
-    float gnmo = (2.0 * ndm * max(dot(N, Wo), 0.0)) / max(dot(m, Wo), 0.0);
+    float gnmi = (2.0 * m_ndm * max(idn, 0.0)) / m_idm;
+    float gnmo = (2.0 * m_ndm * max(odn, 0.0)) / m_idm;
 
     return min(1., min(gnmi, gnmo));
 }
 
-
 // ============== FONCTION DE RENDU ==================
 
 // Wi =  Direction de la lumière incidente (vecteur unitaire)
-vec3 Cook_Torrance(vec3 Wi, vec3 Li)
+vec3 Cook_Torrance(vec3 Wi)
 {    
-    vec3  Wo  = normalize(uPosLights[0] - vec3(pos3D)); // Direction de l'oeil de l'observateur (vecteur unitaire)
-    vec3  m   = normalize(Wi + Wo);                     // normale des microsurfaces
-    float idn = dot(N, Wi);                             // cosinus de l'angle (N, Wi)
+    vec3  Wo     = normalize(uPosLights[0] - vec3(pos3D)); // Direction de l'oeil de l'observateur (vecteur unitaire)
+    vec3  ms     = normalize(Wi + Wo);                     // normale speculaire des microsurfaces
+    float m_idms = max(dot(ms, Wi), 0.0);
+    float idn    = dot(N, Wi); // cosinus de l'angle (N, Wi)
+    float odn    = dot(N, Wo); // cosinus de l'angle (N, Wo)
+
+    vec3 Fd = vec3(0.0);
 
     // Calcul du speculaire de Cook-Torrance
-    vec3 F_m = Fresnel_Schlick_approximation(Wi, m);
-    vec3 Fs  = (F_m *
-               Beckmann_Distribution(m) *
-               Cook_Torrance_Geometry(Wi, Wo, m)) / (4.0 * abs(idn) * abs(dot(N, Wo)));
+    vec3 F_ms = Fresnel_Schlick_approximation(m_idms);
+    if(uEnvMapON == 0)
+    {
+        // Calcul de la diffusion sur les microsurfaces opaque avec un modele lambertien
+        Fd = (vec3(1.0) - F_ms) * uKd / M_PI;  
+    }
 
-    // Calcul de la diffusion sur les microsurfaces avec un modele lambertien
-    vec3 Fd = (vec3(1.0) - F_m) * uKd / M_PI;
 
-    // Fr = Fonction de rendu: Diffusion lambertien + Speculaire de Cook-Torrance
-    vec3 Fr = Fd + Fs;
+    float ndms  = dot(N, ms);  // cosinus de l'angle (N, m)
+    vec3 Fs = (F_ms *
+              Beckmann_Distribution(ndms) *
+              Cook_Torrance_Geometry(idn, odn, m_idms, ndms)) / (4.0 * abs(idn) * abs(odn));
 
+    
+    return Fd + Fs;
+}
+
+// Calcul de la transparence sur les microsurfaces avec le modele defini dans le papier
+// "Microfacet Models for Refraction through Rough Surfaces" [Wal07]
+vec3 Walter(vec3 Wo)
+{
+    vec3  Wi   = normalize(uPosLights[0] - vec3(pos3D)); // Direction de l'oeil de l'observateur (vecteur unitaire)
+    vec3  mt   = normalize(-Wi - uNo * Wo);
+    float idn  = dot(N, Wi);
+    float odn  = dot(N, Wo);
+    float ndmt = dot(mt, N);
+    float idmt = dot(mt, Wi);
+    float odmt = dot(mt, Wo);
+    float iodmt2 = (idmt + uNo * odmt) * (idmt + uNo * odmt);
+    float no2  = uNo * uNo;
+
+    return (abs(idmt) * abs(odmt) / abs(idn) * abs(odn)) *
+           (no2 * (vec3(1.0) - Fresnel_Schlick_approximation(max(idmt, 0.0))) *
+           Beckmann_Distribution(ndmt) *
+           Cook_Torrance_Geometry(idn, odn, max(idmt, 0.0), ndmt) / iodmt2);
+}
+
+vec3 Fr(vec3 Li, vec3 Fr, float idn)
+{
     return Li * M_PI * Fr * max(idn, 0.0);
 }
 
 void main(void)
 {
-    vec3 Lo = vec3(0.0, 0.0, 0.0);
+    vec3 Lo = vec3(0.0);
 
     if(uEnvMapON == 1)
     {
-        vec3 Wo = normalize(vec3(pos3D) - uPosLights[0]);
-        vec3 R = normalize(reflect(Wo, N));
-        vec3 irradianceMap = textureCube(u_skybox, R).rgb;
+        vec3 Wo            = normalize(vec3(pos3D) - uPosLights[0]);
+        vec3 R             = normalize(refract(Wo, N, 1. / uNo));
+        vec3 irradianceMap = textureCube(u_skybox, R,  4.0 * uRoughness).rgb;
 
-        Lo = Cook_Torrance(R, irradianceMap);
+        Lo = irradianceMap * uKd;
+
+        // TODO resultat actuel temporaire
+        // Fr = Fonction de rendu: Speculaire de Cook-Torrance + Transparence de Walter
+        //Lo = Fr(irradianceMap, Cook_Torrance(R) + Walter(R), dot(N, R));
+
+        for(int i = 0 ; i < 6 ; ++i)
+        {
+            // Equation de rendu Lo = Li * Fr physiquement realiste par la conservation de l'energie avec Fr * cos(angle (N, Wi))
+            // Speculaire de Cook-Torrance + Transparence de Walter
+            if(uLightsON[i] == 1)
+            {
+                vec3 Wi = normalize(uPosLights[i] - vec3(pos3D));
+                Lo += Fr(uColorLights, Cook_Torrance(Wi) /*+ Walter(Wi)*/, dot(N, Wi));
+            }
+        }
     }
 
-    for(int i = 0 ; i < 6 ; ++i)
+    else
     {
-        // Equation de rendu Lo = Li * Fr physiquement realiste par la conservation de l'energie avec Fr * cos(angle (N, Wi))
-        if(uLightsON[i] == 1)
-            Lo += Cook_Torrance(normalize(uPosLights[i] - vec3(pos3D)), uColorLights);
+        for(int i = 0 ; i < 6 ; ++i)
+        {
+            // Equation de rendu Lo = Li * Fr physiquement realiste par la conservation de l'energie avec Fr * cos(angle (N, Wi))
+            // Diffusion lambertien + Speculaire de Cook-Torrance
+            if(uLightsON[i] == 1)
+            {
+                vec3 Wi = normalize(uPosLights[i] - vec3(pos3D));
+                Lo += Fr(uColorLights, Cook_Torrance(Wi), dot(N, Wi));
+            }
+        }
     }
 
     if(uToneMappingCheck == 1)
-        Lo = Lo / (Lo + vec3(1.0, 1.0, 1.0));
+        Lo = Lo / (Lo + vec3(1.0));
     
     if(uGammaCheck == 1)
     {
